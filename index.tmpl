@@ -45,6 +45,7 @@
     </script>
     <script src='http://cdn.ractivejs.org/latest/ractive.js'></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.min.js"></script>
     <script>
       var server = 'ws://{{server}}:{{port}}'
         , ws     = new WebSocket(server);
@@ -63,7 +64,10 @@
         if (data.message === 'connected'){
             ws.send(gid);
         } else {
-            update(data[gid]);
+
+            data = parse(data[gid]);
+
+            update(data);
         }
       };
 
@@ -74,6 +78,11 @@
               template : $('#main-template').html(),
               data : data
           });
+      }
+
+      function parse(data){
+
+        return data;
       }
     </script>
   </body>

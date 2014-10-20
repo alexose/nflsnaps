@@ -14,7 +14,7 @@ var ports = {
 // Options
 var options = {
   url : 'http://www.nfl.com/liveupdate/game-center/{{dir}}/{{gid}}_gtd.json',
-  delay : 10000,
+  delay : 1000,
   server : 'localhost'
 };
 
@@ -38,14 +38,20 @@ wss.on('connection', function(ws){
     // TODO: validate gid
     gid = data;
 
-    // Poll gid
+    // Begin polling gid
     var target = options.url
       .replace('{{dir}}', gid)
       .replace('{{gid}}', gid);
 
-    fetch(target, function(response){
-      ws.send(response);
-    });
+    interval[gid] = setInterval(go, 10000);
+
+    go.call();
+
+    function go(){
+      fetch(target, function(response){
+        ws.send(response);
+      });
+    }
   });
 
   function send(type, data){
