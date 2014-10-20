@@ -2,10 +2,15 @@
 <html>
   <head>
     <title>NFLSNAPZ</title>
+    <style>
+      td {
+        min-width: 70px;
+      }
+    </style>
   </head>
   <body>
-    <div class="container"></div>
-    <script id="main-template" type="text/x-handlebars-template">
+    <div id="container"></div>
+    <script id="main-template" type="text/ractive">
         <h1>Live NFL Snap Data</h1>
         <table>
           <tr class="home">
@@ -19,13 +24,30 @@
             {{/each}}
           </tr>
         </table>
+
+        {{#each drives}}
+        <h2>{{posteam}} for {{ydsgained}} yards</h2>
+        <table>
+          <tr>
+            <th>Down</th>
+            <th>Yards</th>
+            <th>Description</th>
+          </tr>
+          {{#each plays}}
+          <tr class="play">
+            <td>{{this.down}}</td>
+            <td>{{this.ydsnet}}</td>
+            <td>{{this.desc}}</td>
+          </tr>
+          {{/each}}
+        </table>
+        {{/each}}
     </script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.min.js"></script>
+    <script src='http://cdn.ractivejs.org/latest/ractive.js'></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script>
       var server = 'ws://{{server}}:{{port}}'
-        , ws     = new WebSocket(server)
-        , container = $('body>div.container');
+        , ws     = new WebSocket(server);
 
       ws.onmessage = function(event){
 
@@ -41,14 +63,18 @@
         if (data.message === 'connected'){
             ws.send(gid);
         } else {
-
-            var source = $('#main-template').html(),
-                template = Handlebars.compile(source),
-                html = template(data[gid]);
-
-            container.html(html);
+            update(data[gid]);
         }
       };
+
+      function update(data){
+          console.log(data);
+          var ractive = new Ractive({
+              el : 'container',
+              template : $('#main-template').html(),
+              data : data
+          });
+      }
     </script>
   </body>
 </html>
