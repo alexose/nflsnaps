@@ -1,0 +1,23 @@
+{
+  "name": "nflsnaps",
+  "version": "1.0.0",
+  "description": "See NFL snap data in real time.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexose/nflsnaps.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alexose/nflsnaps/issues"
+  },
+  "homepage": "https://github.com/alexose/nflsnaps",
+  "dependencies": {
+    "sievejs": "0.0.4",
+    "ws": "^0.4.32"
+  }
+}
