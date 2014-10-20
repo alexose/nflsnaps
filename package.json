@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/alexose/nflsnaps",
   "dependencies": {
+    "handlebars": "^2.0.0",
     "sievejs": "0.0.4",
     "ws": "^0.4.32"
   }
