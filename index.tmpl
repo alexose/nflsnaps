@@ -4,6 +4,51 @@
     <title>NFLSNAPZ</title>
   </head>
   <body>
-    <h1>Live NFL Snap Data for {{date}}</h1>
+    <div class="container"></div>
+    <script id="main-template" type="text/x-handlebars-template">
+        <h1>Live NFL Snap Data</h1>
+        <table>
+          <tr class="home">
+            {{#each home.score}}
+            <td class="q{{@index}}">{{this}}</td>
+            {{/each}}
+          </tr>
+          <tr class="away">
+            {{#each away.score}}
+            <td class="q{{@index}}">{{this}}</td>
+            {{/each}}
+          </tr>
+        </table>
+    </script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script>
+      var server = 'ws://{{server}}:{{port}}'
+        , ws     = new WebSocket(server)
+        , container = $('body>div.container');
+
+      ws.onmessage = function(event){
+
+        var str = event.data,
+            gid = {{gid}};
+
+        if (!str){
+            return;
+        }
+
+        var data = JSON.parse(str);
+
+        if (data.message === 'connected'){
+            ws.send(gid);
+        } else {
+
+            var source = $('#main-template').html(),
+                template = Handlebars.compile(source),
+                html = template(data[gid]);
+
+            container.html(html);
+        }
+      };
+    </script>
   </body>
 </html>

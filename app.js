@@ -4,11 +4,6 @@ var http   = require("http")
   , fs     = require("fs")
   , qs     = require("querystring");
 
-var options = {
-  url : 'http://www.nfl.com/liveupdate/game-center/{{dir}}/{{gid}}_gtd.json',
-  delay : 10000
-};
-
 var args = process.argv || [];
 
 var ports = {
@@ -16,13 +11,42 @@ var ports = {
   socket : args[3] || 8080
 };
 
+// Options
+var options = {
+  url : 'http://www.nfl.com/liveupdate/game-center/{{dir}}/{{gid}}_gtd.json',
+  delay : 10000,
+  server : 'localhost'
+};
+
+
 // Websocket interface
 var WebSocketServer = require('ws').Server
   , wss = new WebSocketServer({port: ports.socket});
 
+var interval = {};
+
 wss.on('connection', function(ws){
 
-  send('connect');
+  send('connected');
+
+  var gid;
+
+  // Wait for GID request
+  // TODO: caching so ESPN won't get mad
+  ws.on('message', function(data){
+
+    // TODO: validate gid
+    gid = data;
+
+    // Poll gid
+    var target = options.url
+      .replace('{{dir}}', gid)
+      .replace('{{gid}}', gid);
+
+    fetch(target, function(response){
+      ws.send(response);
+    });
+  });
 
   function send(type, data){
     try {
@@ -31,20 +55,15 @@ wss.on('connection', function(ws){
         data : data
       }));
     } catch(e){
-      ws.on('message', function(){});
-      console.log(e);
     }
   }
-});
 
-// Load HTML template
-var template = fs.readFileSync('index.tmpl', 'utf8');
+});
 
 // HTTP interface
 http.createServer(function(request, response) {
 
-  var queries = qs.parse(request.url.split('?')[1])
-    , interval = {};
+  var queries = qs.parse(request.url.split('?')[1]);
 
   function error(string){
     respond(string, "text", 500);
@@ -61,13 +80,15 @@ http.createServer(function(request, response) {
   }
 
   function start(gid){
-    var url = options.url
-      .replace('{{dir}}', gid)
-      .replace('{{gid}}', gid);
 
-    interval[gid] = setInterval(function(){
-      fetch(url, broadcast);
-    }, options.delay);
+    // Load HTML template
+    var template = fs.readFileSync('index.tmpl', 'utf8')
+      .replace('{{gid}}', gid)
+      .replace('{{server}}', options.server)
+      .replace('{{port}}', ports.socket);
+
+    respond(template);
+
   }
 
   function broadcast(response){
