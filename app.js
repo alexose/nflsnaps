@@ -4,6 +4,8 @@ var http   = require("http")
   , fs     = require("fs")
   , qs     = require("querystring");
 
+var GIDStream = require("./gidstream");
+
 var args = process.argv || [];
 
 var ports = {
@@ -23,7 +25,7 @@ var options = {
 var WebSocketServer = require('ws').Server
   , wss = new WebSocketServer({port: ports.socket});
 
-var interval = {};
+var streams = {};
 
 wss.on('connection', function(ws){
 
@@ -32,26 +34,22 @@ wss.on('connection', function(ws){
   var gid;
 
   // Wait for GID request
-  // TODO: caching so ESPN won't get mad
-  ws.on('message', function(data){
+  ws.on('message', function(gid){
 
-    // TODO: validate gid
-    gid = data;
+    if (!streams[gid]){
 
-    // Begin polling gid
-    var target = options.url
-      .replace('{{dir}}', gid)
-      .replace('{{gid}}', gid);
-
-    interval[gid] = setInterval(go, 10000);
-
-    go.call();
-
-    function go(){
-      fetch(target, function(response){
-        ws.send(response);
-      });
+      // Spin up a new stream
+      streams[gid] = new GIDStream(gid);
     }
+
+    var s = streams[gid];
+
+    console.log(s);
+
+    s.on('readable', function(buf){
+      var buf = s.read();
+      console.log(buf);
+    });
   });
 
   function send(type, data){
