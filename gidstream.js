@@ -1,6 +1,7 @@
 // GIDStream
 //
-// Provides a node stream of GID data.
+// Provides a Readable stream of NFL JSON data.
+// Data is from nfl.com's game-center
 // These streams are managed by app.js.
 
 var http   = require("http")
@@ -20,23 +21,33 @@ module.exports = function(gid){
 
   var rs = new Readable;
 
+  var timeout;
+
+  rs.setEncoding('utf8');
+
   rs._read = function(evt){}
+
+  rs.end = function(){
+    console.log('Ending stream ' + gid);
+    clearTimeout(timeout);
+  }
+
+  poll();
 
   // Begin polling the target and emitting data to the stream
   function poll(data){
     if (data){
       rs.push(data);
-      fetch(target, poll, error);
-    } else {
-      setTimeout(function(){
+      timeout = setTimeout(function(){
         fetch(target, poll, error);
       }, 5000);
+    } else {
+      fetch(target, poll, error);
     }
   }
 
   function error(){
     rs.end();
-    console.log('Ending stream ' + gid);
   }
 
   return rs;

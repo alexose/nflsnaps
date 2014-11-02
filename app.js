@@ -34,32 +34,69 @@ wss.on('connection', function(ws){
   var gid;
 
   // Wait for GID request
-  ws.on('message', function(gid){
+  ws.on('message', function(_gid){
 
-    if (!streams[gid]){
+    // TODO: connect to multiple streams
+    gid = _gid;
+
+    var stream = streams[gid];
+
+    if (!stream){
 
       // Spin up a new stream
-      streams[gid] = new GIDStream(gid);
+      streams[gid] = {
+        users : 0,
+        readable : new GIDStream(gid)
+      }
+
+      stream = streams[gid];
     }
 
-    var s = streams[gid];
+    // Increment user count
+    stream.users += 1;
 
-    console.log(s);
+    // Set up readable event
+    var r = stream.readable;
 
-    s.on('readable', function(buf){
-      var buf = s.read();
-      console.log(buf);
+    r.on('readable', function(buf){
+      var buf = r.read();
+
+      if (buf && buf.length){
+        console.log('fart: ', buf.length);
+      }
     });
   });
 
+  ws.on('close', function(){
+
+    var stream = streams[gid];
+
+    // See if a stream should be closed
+    if (stream){
+
+      stream.users -= 1;
+
+      if (!stream.users){
+
+        // Close stream if we're out of users
+        stream.readable.end();
+        console.log('Closing stream for GID ' + gid);
+      }
+    }
+  })
+
   function send(type, data){
     try {
-      ws.send(JSON.stringify({
+
+      var payload = JSON.stringify({
         message : type,
         data : data
-      }));
-    } catch(e){
-    }
+      });
+
+      // TODO: jsonpatch
+      ws.send(payload);
+
+    } catch(e){}
   }
 
 });
@@ -92,21 +129,6 @@ http.createServer(function(request, response) {
       .replace('{{port}}', ports.socket);
 
     respond(template);
-
-  }
-
-  function broadcast(response){
-    console.log(response);
-  }
-
-  function stop(gid){
-    if (interval[gid]){
-      clearInterval(interval[gid]);
-      console.log('Stopped polling gid ' + gid);
-    } else {
-      console.log('Tried to stop polling gid ' + gid + ', but it wasn\'t running.');
-    }
-
   }
 
   function respond(string, type, code){
@@ -127,23 +149,3 @@ http.createServer(function(request, response) {
 }).listen(ports.http, function(){
   console.log('Server running on port ' + ports.http);
 });
-
-
-function fetch(url, cb){
-
-  var request = http.request(url, function(response){
-    var body = ""
-    response.on('data', function(data) {
-      body += data;
-    });
-    response.on('end', function(){
-      cb(body);
-    });
-  });
-
-  request.on('error', function(e) {
-    console.log('Problem with request: ' + e.message);
-  });
-
-  request.end();
-}
