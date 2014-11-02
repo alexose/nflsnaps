@@ -62,7 +62,7 @@ wss.on('connection', function(ws){
       var buf = r.read();
 
       if (buf && buf.length){
-        console.log('fart: ', buf.length);
+        send(buf);
       }
     });
   });
