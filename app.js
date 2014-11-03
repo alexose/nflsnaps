@@ -5,6 +5,7 @@ var http   = require("http")
   , qs     = require("querystring");
 
 var GIDStream = require("./gidstream");
+var GIDBrowser = require("./gidbrowser");
 
 var args = process.argv || [];
 
@@ -15,11 +16,8 @@ var ports = {
 
 // Options
 var options = {
-  url : 'http://www.nfl.com/liveupdate/game-center/{{dir}}/{{gid}}_gtd.json',
-  delay : 1000,
   server : 'localhost'
 };
-
 
 // Websocket interface
 var WebSocketServer = require('ws').Server
@@ -29,15 +27,14 @@ var streams = {};
 
 wss.on('connection', function(ws){
 
-  send('connected');
+  // Send browser stuff along
+  send('browser', GIDBrowser.data);
 
-  var gid;
+  // Track connected streams
+  var connected = {};
 
   // Wait for GID request
   ws.on('message', function(_gid){
-
-    // TODO: connect to multiple streams
-    gid = _gid;
 
     var stream = streams[gid];
 
@@ -52,6 +49,8 @@ wss.on('connection', function(ws){
       stream = streams[gid];
     }
 
+    connected[gid] = stream;
+
     // Increment user count
     stream.users += 1;
 
@@ -62,17 +61,16 @@ wss.on('connection', function(ws){
       var buf = r.read();
 
       if (buf && buf.length){
-        send(buf);
+        send('data', buf);
       }
     });
   });
 
   ws.on('close', function(){
 
-    var stream = streams[gid];
-
-    // See if a stream should be closed
-    if (stream){
+    // Disconnect from all streams
+    for (var gid in connected){
+      var stream = streams[gid];
 
       stream.users -= 1;
 
@@ -110,15 +108,7 @@ http.createServer(function(request, response) {
     respond(string, "text", 500);
   }
 
-  if (queries.gid){
-    start(queries.gid);
-  } else {
-    explain();
-  }
-
-  function explain(){
-    respond('Please provide a Game ID (e.g. 2014101912).');
-  }
+  start(queries.gid);
 
   function start(gid){
 

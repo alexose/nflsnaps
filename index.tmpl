@@ -9,9 +9,22 @@
     </style>
   </head>
   <body>
+    <div id="browser"></div>
     <div id="container"></div>
-    <script id="main-template" type="text/ractive">
-        <h1>Live NFL Snap Data</h1>
+
+    <script id="browser-template" type="text/ractive">
+      <table>
+          <tr>
+          {{#each games}}
+              <td>
+                  {{eid}} : {{hnn}} {{vnn}}
+              </td>
+          {{/each}}
+          </tr>
+      </table>
+    </script>
+
+    <script id="game-template" type="text/ractive">
         <table>
           <tr class="home">
             {{#each home.score}}
@@ -48,12 +61,19 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.min.js"></script>
     <script>
       var server = 'ws://{{server}}:{{port}}'
-        , ws     = new WebSocket(server);
+        , ws     = new WebSocket(server)
+        , data;
+
+      // Set up browser
+      var browser = new Ractive({
+          el : 'browser',
+          template : $('#browser-template').html(),
+          data : data
+      });
 
       ws.onmessage = function(event){
 
-        var str = event.data,
-            gid = {{gid}};
+        var str = event.data;
 
         if (!str){
             return;
@@ -61,21 +81,39 @@
 
         var data = JSON.parse(str);
 
-        if (data.message === 'connected'){
-            ws.send(gid);
-        } else {
-
-            data = parse(data[gid]);
-
-            update(data);
+        if (handlers[data.message]){
+            handlers[data.message](data.data);
         }
+      };
+
+      var handlers = {
+
+        // Update browser view
+        browser : function(data){
+            try {
+                var arr = data.ss.gms[0].g,
+                    games = arr
+                      .map(function(d){ return d.$ })
+                      .filter(function(d) { return d.q !== 'F' && d.q !== 'P' });
+
+                browser.set('games', games);
+            } catch(e){
+                console.log(e);
+            }
+        },
+
+        // Update game view
+        game : function(data){
+            console.log('game');
+            console.log(data);
+        },
       };
 
       function update(data){
 
           var ractive = new Ractive({
-              el : 'container',
-              template : $('#main-template').html(),
+              el : 'game',
+              template : $('#game-template').html(),
               data : data
           });
       }
