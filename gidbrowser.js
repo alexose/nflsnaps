@@ -21,7 +21,11 @@ GIDBrowser.prototype.update = function(){
 
   function success(data){
     parse(data, function(err, obj){
-      self.data = obj;
+      var arr = obj.ss.gms[0].g
+        .map(function(d){ return d.$; })
+        .filter(function(d){ return d.q !== 'F' && d.q !== 'P'; });
+
+      self.data = { games : arr };
     });
   }
 

@@ -33,37 +33,61 @@ wss.on('connection', function(ws){
   // Track connected streams
   var connected = {};
 
-  // Wait for GID request
-  ws.on('message', function(_gid){
+  var handlers = {
 
-    var stream = streams[gid];
+    // Add game to stream
+    add : function(gid){
 
-    if (!stream){
+      var stream = streams[gid];
 
-      // Spin up a new stream
-      streams[gid] = {
-        users : 0,
-        readable : new GIDStream(gid)
+      if (!stream){
+
+        console.log('Starting new stream for gid ' + gid);
+
+        // Spin up a new stream
+        streams[gid] = {
+          users : 0,
+          readable : new GIDStream(gid)
+        }
+
+        stream = streams[gid];
       }
 
-      stream = streams[gid];
-    }
+      connected[gid] = stream;
 
-    connected[gid] = stream;
+      // Increment user count
+      stream.users += 1;
 
-    // Increment user count
-    stream.users += 1;
+      // Set up readable event
+      var r = stream.readable;
 
-    // Set up readable event
-    var r = stream.readable;
+      r.on('readable', function(buf){
+        var buf = r.read()
+          , obj = JSON.parse(buf);
 
-    r.on('readable', function(buf){
-      var buf = r.read();
+        var data = obj[gid];
 
-      if (buf && buf.length){
-        send('data', buf);
-      }
-    });
+        if (buf && buf.length){
+          send('game', {
+            gid : gid,
+            data : data
+          });
+        }
+      });
+
+    },
+
+    // Remove game from stream
+    remove : function(gid){
+
+    },
+  };
+
+  // Handle incoming requests
+  ws.on('message', function(str){
+
+    var obj = JSON.parse(str);
+    handlers[obj.message](obj.data);
   });
 
   ws.on('close', function(){
@@ -78,7 +102,7 @@ wss.on('connection', function(ws){
 
         // Close stream if we're out of users
         stream.readable.end();
-        console.log('Closing stream for GID ' + gid);
+        delete streams[gid];
       }
     }
   })

@@ -4,19 +4,26 @@
     <title>NFLSNAPZ</title>
     <style>
       td {
-        min-width: 70px;
+          min-width: 70px;
+      }
+
+      td.game {
+          border: 2px solid #fff;
+      }
+      td.game.active {
+          border: 2px solid #eee;
       }
     </style>
   </head>
   <body>
     <div id="browser"></div>
-    <div id="container"></div>
+    <div id="game"></div>
 
     <script id="browser-template" type="text/ractive">
       <table>
           <tr>
           {{#each games}}
-              <td>
+              <td class="game{{active ? ' active' : ''}}" on-click="toggle">
                   {{eid}} : {{hnn}} {{vnn}}
               </td>
           {{/each}}
@@ -71,6 +78,35 @@
           data : data
       });
 
+      browser.on('toggle', function(evt){
+          var context = evt.context,
+              gid = context.eid,
+              payload;
+
+          if (context.active){
+              context.active = false;
+
+              // Disconnect from GID stream
+              payload = {
+                  message : 'remove',
+                  data : gid
+              };
+
+          } else {
+              context.active = true;
+
+              // Connect to GID stream
+              payload = {
+                  message : 'add',
+                  data : gid
+              };
+          }
+
+          ws.send(JSON.stringify(payload));
+          browser.update();
+
+      });
+
       ws.onmessage = function(event){
 
         var str = event.data;
@@ -91,11 +127,7 @@
         // Update browser view
         browser : function(data){
             try {
-                var arr = data.ss.gms[0].g,
-                    games = arr
-                      .map(function(d){ return d.$ })
-                      .filter(function(d) { return d.q !== 'F' && d.q !== 'P' });
-
+                var games = data.games;
                 browser.set('games', games);
             } catch(e){
                 console.log(e);
@@ -103,25 +135,15 @@
         },
 
         // Update game view
-        game : function(data){
-            console.log('game');
-            console.log(data);
+        game : function(obj){
+            new Ractive({
+                el : 'game',
+                template : $('#game-template').html(),
+                data : obj.data
+            });
         },
       };
 
-      function update(data){
-
-          var ractive = new Ractive({
-              el : 'game',
-              template : $('#game-template').html(),
-              data : data
-          });
-      }
-
-      function parse(data){
-
-        return data;
-      }
     </script>
   </body>
 </html>
